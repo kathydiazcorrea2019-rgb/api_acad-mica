@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from sqlmodel import Session, select
 
 from models.course import Course
-from schemas.course import CourseCreate
+from schemas.course import CourseCreate, CourseUpdate
 
 
 def create_course(
@@ -18,9 +18,9 @@ def create_course(
         active=course_data.active
     )
 
-    # Registra el objeto en la sesión, todavía sin confirmar la transacción.
+    # Registra el objeto en la sesion, todavía sin confirmar la transacción.
     session.add(course)
-    # Confirma la inserción en la base de datos.
+    # Confirma la insercion en la base de datos.
     session.commit()
     # Recarga los valores guardados, como el ID generado por SQLite.
     session.refresh(course)
@@ -59,3 +59,60 @@ def get_course(
         )
 
     return course
+
+def update_course(
+        course_id: int,
+        course_data: CourseUpdate,
+        session: Session
+):
+    # Busca el curso existente; el ID no se modifica en ningun momento.
+    course = session.get(
+        Course,
+        course_id
+    )
+
+    # Si no existe, informa al cliente con el estado HTTP 404.
+    if not course: 
+
+        raise HTTPException(
+            status_code=404,
+            detail="Course not found"
+        )
+
+    # Reemplaza los tres campos con los datos validos (actualizacion completa)
+    course.name  = course_data.name
+    course.credits = course_data.credits
+    course.active = course_data.active
+
+    #registra el objeto modificado de la sesion.
+    session.add(course)
+    #confirma el cambio en la base de datos.
+    session.commit()
+    # recarga los valores guardados.
+    session.refresh(course)
+
+    return course
+
+def delete_course(
+        course_id: int,
+        session: Session
+):
+    #Busca por clave primaria; devuelve None si no existe ese ID.
+        course = session.get(
+            Course,
+            course_id    
+        )
+
+        # Si no existe, informa al cliente con el estado HTTP 404.
+        if not course:
+
+            raise HTTPException(
+                status_code=404,
+                detail="Course not found"
+            )
+        # Marca el registro para eliminarlo.
+        session.delete(course)
+        # Confirma la eliminacion de forma permanente en SQLite.
+        session.commit()
+
+        return{"message": "Course deleted"}
