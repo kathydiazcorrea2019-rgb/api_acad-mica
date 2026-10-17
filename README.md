@@ -1,136 +1,277 @@
 # API Académica
 
-API educativa para crear y consultar cursos académicos con **FastAPI, SQLModel y SQLite**. El código incluye comentarios en español para estudiar cómo se conectan las rutas HTTP, la validación de datos y la persistencia.
-
-La explicación detallada del proyecto, la práctica con Swagger y los ejercicios están en la [guía para estudiantes](docs.md).
-
-## Funcionalidades
-
-- Crear cursos con nombre, créditos y estado activo.
-- Consultar todos los cursos o buscar uno por su identificador.
-- Validar los datos de entrada y responder con errores HTTP.
-- Conservar los registros en una base de datos SQLite local.
-
-El proyecto implementa creación y consulta. La actualización, eliminación, autenticación y paginación quedan como posibles ampliaciones.
+API REST para gestionar **cursos** y **estudiantes**, construida con FastAPI, SQLModel y SQLite. El proyecto sigue una arquitectura por responsabilidades (router, schema, service, model y base de datos) y guarda los datos de forma persistente en un archivo SQLite.
 
 ## Tecnologías
 
-| Herramienta | Uso |
-| --- | --- |
-| FastAPI | Aplicación web, rutas y documentación interactiva. |
-| Uvicorn | Servidor que ejecuta la API. |
-| SQLModel | Modelos de tablas y operaciones de base de datos. |
-| Pydantic | Esquemas y validación de datos. |
-| SQLite | Almacenamiento en el archivo `database.db`. |
+- Python 3.13.14
+- FastAPI
+- Uvicorn
+- SQLModel
+- Pydantic
+- SQLite
 
-Las versiones utilizadas están en [requirements.txt](requirements.txt). El proyecto se ha ejecutado con **Python 3.12**.
+## Funcionalidades implementadas
 
-## Inicio rápido
+**Cursos (CRUD completo)**
 
-Abre una terminal en la carpeta del proyecto, donde está `main.py`.
+- Crear un curso (`POST`).
+- Listar todos los cursos y consultar uno por su ID (`GET`).
+- Actualizar un curso por completo conservando su ID (`PUT`).
+- Eliminar un curso (`DELETE`).
 
-### 1. Crear y activar el entorno virtual
+**Estudiantes**
 
-En Linux o macOS:
+- Crear un estudiante (`POST`), con `active` en `true` por defecto.
+- Listar todos los estudiantes y consultar uno por su ID (`GET`).
+
+**Aspectos generales**
+
+- Validación de los datos de entrada con schemas de Pydantic.
+- Códigos HTTP correctos: `200`, `201`, `404` y `422`.
+- Persistencia en SQLite: los datos se conservan al reiniciar el servidor.
+- Las tablas `course` y `student` conviven en el mismo archivo `database.db`.
+- Documentación interactiva con Swagger en `/docs`.
+
+## Cómo ejecutar el proyecto
+
+### 1. Obtener el proyecto
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
+git clone https://github.com/kathydiazcorrea2019-rgb/api_acad-mica.git
+cd api_acad-mica
 ```
 
-En Windows PowerShell:
+### 2. Crear y activar el entorno virtual
+
+Windows (PowerShell):
 
 ```powershell
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 ```
 
-Si el entorno `venv` ya existe, basta con activarlo.
+Si PowerShell bloquea el script, ejecuta una vez:
 
-### 2. Instalar las dependencias
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+Linux / macOS:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 3. Instalar las dependencias
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-### 3. Ejecutar la API
+### 4. Iniciar el servidor
+
+Desde la carpeta raíz del proyecto:
 
 ```bash
-python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
+python -m uvicorn main:app --reload
 ```
 
-`main:app` identifica el objeto `app` del archivo `main.py`. La opción `--reload` recarga el servidor cuando editas el código durante el desarrollo. Para detenerlo, presiona `Ctrl+C`.
+### 5. Abrir la documentación
 
-Abre la [documentación interactiva Swagger](http://127.0.0.1:8000/docs) para probar los endpoints con **Try it out → Execute**.
+- Swagger UI: <http://127.0.0.1:8000/docs>
 
-La base de datos y sus tablas se crean al iniciar la aplicación. Ejecuta el comando desde la raíz del proyecto para usar siempre el mismo archivo `database.db`.
+El archivo `database.db` se crea automáticamente la primera vez que se inicia la aplicación. Ejecuta siempre Uvicorn desde la carpeta raíz, porque la ruta de la base de datos es relativa.
 
-## Endpoints
+## Endpoints disponibles
 
-| Método | Ruta | Operación | Estado de éxito |
-| --- | --- | --- | --- |
-| `POST` | `/courses` | Crear un curso. | `201` |
-| `GET` | `/courses` | Listar todos los cursos. | `200` |
-| `GET` | `/courses/{course_id}` | Consultar un curso por ID. | `200` |
+### Cursos
 
-Un curso inexistente devuelve `404`. Los datos que incumplen el esquema devuelven `422`. La ruta `/` no está definida; utiliza `/docs` o `/courses`.
+| Método | Ruta | Descripción | Respuestas |
+|---|---|---|---|
+| POST | `/courses` | Crear un curso | `201`, `422` |
+| GET | `/courses` | Listar los cursos | `200` |
+| GET | `/courses/{course_id}` | Consultar un curso por ID | `200`, `404`, `422` |
+| PUT | `/courses/{course_id}` | Actualizar un curso por completo | `200`, `404`, `422` |
+| DELETE | `/courses/{course_id}` | Eliminar un curso | `200`, `404`, `422` |
 
-## Ejemplo de uso
+### Estudiantes
 
-Para crear un curso, envía este cuerpo JSON a `POST /courses` desde Swagger:
+| Método | Ruta | Descripción | Respuestas |
+|---|---|---|---|
+| POST | `/students` | Crear un estudiante | `201`, `422` |
+| GET | `/students` | Listar los estudiantes | `200` |
+| GET | `/students/{student_id}` | Consultar un estudiante por ID | `200`, `404`, `422` |
+
+## Reglas de validación
+
+**Curso** (`POST` y `PUT`)
+
+| Campo | Regla |
+|---|---|
+| `name` | Texto de 3 a 80 caracteres |
+| `credits` | Entero entre 1 y 6 |
+| `active` | Booleano. En `POST` es `true` por defecto; en `PUT` es obligatorio |
+
+**Estudiante** (`POST`)
+
+| Campo | Regla |
+|---|---|
+| `name` | Texto de 3 a 80 caracteres |
+| `email` | Texto obligatorio y no vacío |
+| `semester` | Entero entre 1 y 10 |
+| `active` | Booleano, `true` por defecto |
+
+## Ejemplos
+
+**Crear un curso**
+
+```http
+POST /courses
+```
 
 ```json
 {
-  "name": "Programación I",
+  "name": "Desarrollo Web II",
   "credits": 3,
   "active": true
 }
 ```
 
-También puedes hacerlo desde otra terminal con `curl` en Bash:
-
-```bash
-curl -i -X POST http://127.0.0.1:8000/courses \
-  -H 'Content-Type: application/json' \
-  -d '{"name": "Programación I", "credits": 3, "active": true}'
-```
-
-La API responde con `201 Created` y el curso guardado:
+Respuesta `201 Created`:
 
 ```json
 {
   "id": 1,
-  "name": "Programación I",
+  "name": "Desarrollo Web II",
   "credits": 3,
   "active": true
 }
 ```
 
-El ID es ilustrativo: SQLite lo asigna automáticamente. Usa el valor recibido para consultar el curso en `/courses/{course_id}`. Cada creación válida guarda un nuevo registro.
+**Actualizar un curso**
 
-### Reglas de entrada
+```http
+PUT /courses/1
+```
 
-| Campo | Regla |
-| --- | --- |
-| `name` | Obligatorio; entre 3 y 80 caracteres. |
-| `credits` | Obligatorio; entero entre 1 y 6. |
-| `active` | Opcional; booleano con valor predeterminado `true`. |
+```json
+{
+  "name": "Programación II",
+  "credits": 4,
+  "active": false
+}
+```
+
+Respuesta `200 OK`: el curso con el mismo `id` y los datos nuevos.
+
+**Eliminar un curso**
+
+```http
+DELETE /courses/1
+```
+
+Respuesta `200 OK`:
+
+```json
+{
+  "message": "Course deleted"
+}
+```
+
+**Crear un estudiante**
+
+```http
+POST /students
+```
+
+```json
+{
+  "name": "Ana Pérez",
+  "email": "ana@universidad.edu",
+  "semester": 4
+}
+```
+
+Respuesta `201 Created`:
+
+```json
+{
+  "id": 1,
+  "name": "Ana Pérez",
+  "email": "ana@universidad.edu",
+  "semester": 4,
+  "active": true
+}
+```
+
+**Errores**
+
+| Situación | Código | Cuerpo |
+|---|---|---|
+| Curso inexistente | `404` | `{"detail": "Course not found"}` |
+| Estudiante inexistente | `404` | `{"detail": "Student not found"}` |
+| Datos inválidos o ID no entero | `422` | Detalle de validación generado por FastAPI |
 
 ## Estructura del proyecto
 
-```text
-fastapi_academica/
-├── main.py                     # Aplicación y ciclo de vida
-├── database/database.py        # Motor SQLite y sesiones
-├── models/course.py            # Modelo de la tabla de cursos
-├── schemas/course.py           # Esquemas de entrada y salida
-├── routers/courses.py          # Endpoints HTTP
-├── services/course_service.py  # Creación y consulta de registros
-├── requirements.txt            # Dependencias
-├── docs.md                     # Guía didáctica detallada
-└── README.md                   # Presentación e inicio rápido
+```
+api_acad-mica/
+│
+├── main.py                    # Punto de entrada: registra routers y crea las tablas
+│
+├── database/
+│   └── database.py            # Motor SQLite, creación de tablas y get_session
+│
+├── models/
+│   ├── course.py              # Tabla Course (table=True)
+│   └── student.py             # Tabla Student (table=True)
+│
+├── schemas/
+│   ├── course.py              # CourseCreate, CourseUpdate, CourseResponse
+│   └── student.py             # StudentCreate, StudentResponse
+│
+├── services/
+│   ├── course_service.py      # Lógica de cursos (crear, listar, consultar, actualizar, eliminar)
+│   └── student_service.py     # Lógica de estudiantes (crear, listar, consultar)
+│
+├── routers/
+│   ├── courses.py             # Endpoints /courses
+│   └── students.py            # Endpoints /students
+│
+├── entrega-pruebas/
+│   ├── informe-pruebas.md     # Informe de pruebas
+│   └── evidencias/            # Capturas de Swagger y de la terminal
+│
+├── README.md
+├── docs.md
+├── ejercicio.md
+└── requirements.txt
 ```
 
-El flujo principal es: **petición HTTP → router y validación → servicio → base de datos → respuesta JSON**.
+## Arquitectura
 
-Para seguir el código paso a paso, comprender `Depends`, `Session`, `commit()` y `refresh()`, o resolver problemas de ejecución, consulta [docs.md](docs.md).
+Cada petición recorre las capas en este orden:
+
+```
+Cliente → Router → Schema → Service → Model → Session → SQLite
+```
+
+| Capa | Responsabilidad |
+|---|---|
+| Router | Recibe la petición HTTP y llama al service |
+| Schema | Valida los datos de entrada y define los de salida |
+| Service | Ejecuta la lógica de negocio y las operaciones con la base de datos |
+| Model | Representa la tabla en la base de datos |
+| Session | Realiza las operaciones sobre la base de datos (`add`, `commit`, `refresh`, `delete`) |
+| SQLite | Guarda los datos de forma persistente en `database.db` |
+
+## Pruebas
+
+Las pruebas se realizaron manualmente con Swagger y quedaron documentadas en [`entrega-pruebas/informe-pruebas.md`](entrega-pruebas/informe-pruebas.md), con sus capturas en [`entrega-pruebas/evidencias/`](entrega-pruebas/evidencias/). Cubren las operaciones de cursos y estudiantes, las validaciones, los códigos `200`, `201`, `404` y `422`, y la persistencia de los datos tras reiniciar Uvicorn.
+
+## Notas
+
+- `venv/` y `database.db` no se incluyen en el repositorio (están en `.gitignore`).
+- Los mensajes de error se mantienen en inglés (`Course not found`, `Course deleted`, `Student not found`) porque forman parte del contrato de la API.
